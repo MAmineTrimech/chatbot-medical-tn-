@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Médical</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff; /* Bleu ciel */
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            max-width: 600px;
+            width: 100%;
+            margin: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1e90ff; /* Bleu foncé */
+            color: #ffffff;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .chat-box {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        .bubble {
+            max-width: 70%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 20px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        .bubble.user {
+            align-self: flex-end;
+            background-color: #1e90ff; /* Bleu foncé */
+            color: #ffffff;
+        }
+        .bubble.bot {
+            align-self: flex-start;
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .input-container {
+            padding: 28px;
+            background-color: #ffffff;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background-color: #1e90ff;
+            color: #ffffff;
+            cursor: pointer;
+            outline: none;
+            margin-left: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #4682b4; /* Bleu plus foncé */
+        }
+        .reset-button {
+            padding: 10px;
+            background-color: #ffffff;
+            color: #1e90ff;
+            border: 1px solid #1e90ff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            outline: none;
+            transition: background-color 0.3s, color 0.3s;
+            margin-right: 10px;
+        }
+        .reset-button:hover {
+            background-color: #4682b4; /* Bleu plus foncé */
+            color: #ffffff;
+        }
+        .reset-button svg {
+            width: 20px;
+            height: 20px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css" />
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            Chatbot Médical
+        </div>
+        <div id="chatBox" class="chat-box">
+            <!-- Les messages apparaîtront ici -->
+        </div>
+        <div class="input-container">
+            <button id="resetButton" class="reset-button" title="Réinitialiser">
+                <svg viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.41 3.59 8 8 8s8-3.59 8-8-3.59-8-8-8z"></path>
+                </svg>
+            </button>
+            <input type="text" id="symptomInput" class="awesomplete" placeholder="Entrez votre symptôme">
+            <button id="sendButton">Envoyer</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const symptomInput = document.getElementById('symptomInput');
+        const sendButton = document.getElementById('sendButton');
+        const resetButton = document.getElementById('resetButton');
+
+        let step = 0;
+        let nom = '';
+        let pays = '';
+        let codePostal = '';
+        let symptome = '';
+        let cadreMedical = '';
+
+        const symptoms = ["Toux", "Fièvre", "Douleur abdominale", "Céphalée", "Nausée", "Mal de gorge", "Vertige", "Mal de tête", "Fatigue", "Douleurs musculaires", "Congestion nasale", "Écoulement nasal", "Essoufflement", "Nausées", "Vomissements", "Diarrhée", "Perte de goût", "Perte d'odorat", "Frissons", "Transpiration excessive", "Douleurs articulaires", "Vertiges", "Éruptions cutanées", "Palpitations", "Tension artérielle élevée", "Insomnie", "Anxiété", "Dépression", "Douleur thoracique", "Œdème (gonflement)", "Difficulté à avaler", "Mictions fréquentes", "Brûlures d'estomac"];
+
+        new Awesomplete(symptomInput, {
+            list: symptoms,
+            minChars: 1,
+            maxItems: 5,
+            autoFirst: true
+        });
+
+        function addMessage(sender, text) {
+            const message = document.createElement('div');
+            message.classList.add('bubble', sender);
+            message.innerHTML = text;
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function sendMessage() {
+            const text = symptomInput.value.trim();
+            if (text === '') return;
+            addMessage('user', text);
+            symptomInput.value = '';
+            handleChat(text);
+        }
+
+        function handleChat(text) {
+            if (step === 0) {
+                nom = text;
+                addMessage('bot', 'De quel pays venez-vous ?');
+                step++;
+            } else if (step === 1) {
+                pays = text;
+                addMessage('bot', 'Entrez le code postal :');
+                step++;
+            } else if (step === 2) {
+                codePostal = text;
+                addMessage('bot', 'Entrez le symptôme :');
+                step++;
+            } else if (step === 3) {
+                symptome = text;
+                addMessage('bot', 'Sélectionnez un cadre médical parmi les options ci-dessous :');
+                showCadreSelection();
+                step++;
+            } else if (step === 4) {
+                cadreMedical = text;
+                addMessage('bot', 'Merci ! Génération du contact en cours...');
+                generateContact();
+            }
+        }
+
+        async function showCadreSelection() {
+            const response = await fetch('http://localhost:5000/cadres_list');
+            if (!response.ok) {
+                addMessage('bot', 'Erreur lors de la récupération des cadres.');
+                return;
+            }
+            
+            const data = await response.json();
+            const cadreSelect = document.createElement('select');
+            cadreSelect.id = 'cadre-select';
+            cadreSelect.onchange = () => {
+                cadreMedical = cadreSelect.value;
+                addMessage('user', cadreMedical);
+                handleChat(cadreMedical);
+                cadreSelect.remove();
+            };
+            
+            data.cadres_list.forEach(cadre => {
+                const option = document.createElement('option');
+                option.value = cadre;
+                option.text = cadre;
+                cadreSelect.appendChild(option);
+            });
+            
+            chatBox.appendChild(cadreSelect);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function generateContact() {
+            try {
+                const response = await fetch('http://localhost:5000/generate_contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nom: nom,
+                        pays: pays,
+                        code_postal: codePostal,
+                        symptome: symptome,
+                        cadre_medical: cadreMedical,
+                    }),
+                });
+
+                if (!response.ok) {
+                    addMessage('bot', 'Erreur lors de la génération du contact.');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    addMessage('bot', data.error);
+                } else {
+                    const contactMessage = `
+                        Cadre médical trouvé : ${data.cadre_medical}<br>
+                        Ville : ${data.ville}<br>
+                        Gouvernorat : ${data.gouvernorat}<br>
+                        URL de contact : <a href="${data.contact_url}" target="_blank" style="color:
+ blue; text-decoration: underline;">${data.contact_url}</a>
+            `;
+            addMessage('bot', contactMessage);
+        }
+    } catch (error) {
+        addMessage('bot', 'Erreur de réseau : ' + error.message);
+    }
+}
+
+
+
+        function refreshChat() {
+            chatBox.innerHTML = '';
+            userInput.value = '';
+            step = 0;
+            addMessage('bot', 'Comment vous appelez-vous ?');
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        resetButton.addEventListener('click', refreshChat);
+
+        // Initial prompt
+        addMessage('bot', 'Comment vous appelez-vous ?');
+    </script>
+</body>
+</html>
